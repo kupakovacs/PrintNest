@@ -1,0 +1,14 @@
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://printnest-7ca66.web.app",
+      "https://printnest-7ca66.firebaseapp.com"
+    ],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["Content-Type", "x-amz-content-sha256", "x-amz-date", "x-amz-user-agent"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]

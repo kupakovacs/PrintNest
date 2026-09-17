@@ -1,0 +1,13 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://printnest-7ca66.web.app",
+      "https://printnest-7ca66.firebaseapp.com"
+    ],
+    "method": ["GET", "HEAD", "POST", "PUT", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "ETag"],
+    "maxAgeSeconds": 3600
+  }
+]
