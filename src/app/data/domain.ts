@@ -16,8 +16,17 @@ export type Orientation = "auto" | "+X" | "-X" | "+Y" | "-Y" | "+Z" | "-Z";
 export type AppView =
   | "landing" | "workspace" | "checkout" | "tracking"
   | "dashboard" | "orders" | "profile" | "signin"
-  | "how-it-works" | "pricing" | "materials";
+  | "how-it-works" | "pricing" | "materials" | "admin";
 export type OrderStatus = "delivered" | "shipped" | "printing" | "packaging" | "waiting" | "review" | "issue";
+export type OrderStageId = "received" | "file-analysis" | "waiting" | "printing" | "inspection" | "packaging" | "shipped" | "delivered";
+
+export interface OrderTimelineEvent {
+  id: OrderStageId;
+  label: string;
+  status: "done" | "active" | "pending";
+  timestamp?: string;
+  description: string;
+}
 
 export interface PrintFile {
   id: string; name: string; size: number; quantity: number;
@@ -47,6 +56,21 @@ export interface MockOrder {
   batches: number; parts: number; total: number; description: string;
   colors: string[]; printTime: string;
   files?: { name: string; storagePath?: string; downloadURL?: string }[];
+  timeline?: OrderTimelineEvent[];
+  placedAt?: string;
+  estimatedCompletion?: string;
+  estimatedDelivery?: string;
+}
+
+export interface QueueItem {
+  id: string;
+  ownerId: string;
+  orderNumber: string;
+  status: "printing" | "waiting" | "review";
+  position: number;
+  eta?: string;
+  batches: number;
+  parts: number;
 }
 
 /* ─────────────────────────────────────────────────────── */
@@ -187,15 +211,23 @@ export function buildCurrentOrder(batches: Batch[]): MockOrder {
   const allFiles = batches.flatMap(b => b.files);
   const colors   = [...new Set(batches.map(b => COLOR_OPTIONS.find(c => c.id === b.color)?.hex ?? "#1C1C1E"))];
   const desc     = allFiles.slice(0, 2).map(f => f.name).join(", ") + (allFiles.length > 2 ? ` + ${allFiles.length - 2} more` : "");
+  const placedAt = new Date().toISOString();
+  const orderNumber = `PN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   return {
-    id: "current", orderNumber: "PN-2026-07-8743", date: "Jul 24, 2026",
-    status: "printing", batches: batches.length, parts: totalParts, total: grandTotal,
+    id: "current", orderNumber, date: new Date().toLocaleDateString(),
+    status: "waiting", batches: batches.length, parts: totalParts, total: grandTotal,
     description: desc || "No files", colors, printTime: `${totalTime.toFixed(1)}h`,
+    placedAt,
+    estimatedCompletion: new Date(Date.now() + totalTime * 60 * 60 * 1000).toISOString(),
+    estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
     files: allFiles.map(file => ({
       name: file.name,
       ...(file.storagePath ? { storagePath: file.storagePath } : {}),
       ...(file.downloadURL ? { downloadURL: file.downloadURL } : {}),
     })),
+    timeline: [
+      { id: "received", label: "Order Received", status: "active", timestamp: placedAt, description: `${totalParts} part${totalParts !== 1 ? "s" : ""} submitted and awaiting processing.` },
+    ],
   };
 }
 

@@ -8,8 +8,8 @@ const { Upload, ChevronDown, ChevronUp, Plus, X, Package, Clock, Truck, ArrowLef
 import { StatusBadge, AppNav, InfoNav, UserMenu, ModeToggle, SectionHeader, OptionPill, ColorPicker, OrientationPicker, PriceBreakdown, DeliveryTimeline, Slider, IsometricPart } from "../components/common";
 import { WorkspaceView, BatchCard, OrderSummary, ModelViewer, QueuePanel, FileRow, SimpleSettings, AdvancedSettings } from "../components/workspace";
 
-export function CheckoutView({ batches, onBack, onPlaceOrder, error, auth }: {
-  batches: Batch[]; onBack: () => void; onPlaceOrder: () => void; error?: string | null; auth: AuthCallbacks;
+export function CheckoutView({ batches, onBack, onPlaceOrder, loading, error, auth }: {
+  batches: Batch[]; onBack: () => void; onPlaceOrder: () => void; loading?: boolean; error?: string | null; auth: AuthCallbacks;
 }) {
   const { subtotal, deliveryDelta, totalMass, totalTime, totalParts, grandTotal } = calcOrderSummary(batches);
   const [email, setEmail]   = useState(auth.user?.email ?? "");
@@ -118,9 +118,9 @@ export function CheckoutView({ batches, onBack, onPlaceOrder, error, auth }: {
                 <div className="flex items-center gap-2"><Clock size={11} /><span>Est. completion: Jul 24, 2026</span></div>
               </div>
               {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-3">{error}</p>}
-              <button onClick={onPlaceOrder}
-                className="w-full py-3.5 mt-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm">
-                Place Order · {fmt(grandTotal)}
+              <button onClick={onPlaceOrder} disabled={loading}
+                className="w-full py-3.5 mt-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait">
+                {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />Uploading files and placing order...</span> : `Place Order · ${fmt(grandTotal)}`}
               </button>
               <div className="flex items-center gap-1.5 justify-center text-xs text-muted-foreground">
                 <Shield size={11} /><span>Secure · No charge until printing starts</span>

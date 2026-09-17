@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import * as Icons from "lucide-react";
 import {
-  Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, QUEUE, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials, makeBatch, makeFile 
+  Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, QueueItem, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials, makeBatch, makeFile 
 } from "../data/domain";
 const { Upload, ChevronDown, ChevronUp, Plus, X, Package, Clock, Truck, ArrowLeft, Check, Layers, FileText, Zap, Shield, ChevronRight, Box, Bell, Eye, CheckCircle, Phone, User, LogOut, Mail, Lock, RotateCcw, MapPin, Printer, Droplets, Sun, Wind, Flame, Thermometer, Ruler, Weight, Cpu, Star, Info, ArrowRight, Sparkles, BarChart3, Camera } = Icons;
 import { AppNav } from "./common";
@@ -326,7 +326,8 @@ export function OrderSummary({ batches, onCheckout }: { batches: Batch[]; onChec
 }
 
 
-export function QueuePanel({ onClose }: { onClose: () => void }) {
+export function QueuePanel({ queue, onClose, onSelect }: { queue: QueueItem[]; onClose: () => void; onSelect?: (orderNumber: string) => void }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const statusConfig = {
     printing: { color: "bg-emerald-500", label: "Printing", ring: "ring-emerald-200" },
     waiting:  { color: "bg-amber-400",   label: "Waiting",  ring: "ring-amber-200"   },
@@ -343,36 +344,37 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-        {QUEUE.map(item => {
+        {queue.length === 0 && <p className="text-xs text-muted-foreground text-center py-8">The global queue is empty.</p>}
+        {queue.map(item => {
           const cfg = statusConfig[item.status];
           return (
-            <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl">
+            <button key={item.id} onClick={() => { setSelectedId(item.id); onSelect?.(item.orderNumber); }} className={`w-full text-left flex items-center gap-3 p-3 rounded-xl transition-colors ${selectedId === item.id ? "bg-secondary ring-1 ring-primary/20" : "bg-muted/40 hover:bg-muted"}`}>
               <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${cfg.color} ring-2 ${cfg.ring}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.time}</p>
+                <p className="text-sm font-medium">{item.orderNumber}</p>
+                <p className="text-xs text-muted-foreground">Position #{item.position} · {item.parts} part{item.parts !== 1 ? "s" : ""}</p>
               </div>
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${
                 item.status === "printing" ? "bg-emerald-50 text-emerald-700"
                   : item.status === "waiting" ? "bg-amber-50 text-amber-700"
                     : "bg-blue-50 text-blue-700"}`}>{cfg.label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
       <div className="px-4 py-4 border-t border-border bg-muted/30">
-        <p className="text-xs text-muted-foreground text-center">Your order would be</p>
-        <p className="text-sm font-semibold text-center mt-0.5">Position #4 · Starts tomorrow ~11:00</p>
+        <p className="text-xs text-muted-foreground text-center">{selectedId ? `Selected ${queue.find(item => item.id === selectedId)?.orderNumber ?? "order"}` : "Global queue"}</p>
+        <p className="text-sm font-semibold text-center mt-0.5">{selectedId ? `Position #${queue.find(item => item.id === selectedId)?.position}` : `${queue.length} active order${queue.length !== 1 ? "s" : ""}`}</p>
       </div>
     </motion.div>
   );
 }
 
 
-export function WorkspaceView({ batches, setBatches, onBack, onCheckout, showQueue, setShowQueue, auth }: {
+export function WorkspaceView({ batches, setBatches, onBack, onCheckout, showQueue, setShowQueue, queue, onQueueOrder, auth }: {
   batches: Batch[]; setBatches: (b: Batch[]) => void;
   onBack: () => void; onCheckout: () => void;
-  showQueue: boolean; setShowQueue: (v: boolean) => void;
+  showQueue: boolean; setShowQueue: (v: boolean) => void; queue: QueueItem[]; onQueueOrder: (orderNumber: string) => void;
   auth: AuthCallbacks;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -432,7 +434,7 @@ export function WorkspaceView({ batches, setBatches, onBack, onCheckout, showQue
           <OrderSummary batches={batches} onCheckout={onCheckout} />
           <div className="h-8" />
         </div>
-        {showQueue && <QueuePanel onClose={() => setShowQueue(false)} />}
+        {showQueue && <QueuePanel queue={queue} onClose={() => setShowQueue(false)} onSelect={onQueueOrder} />}
       </div>
     </div>
   );

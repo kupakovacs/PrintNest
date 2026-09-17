@@ -1,8 +1,8 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signOut, type User } from "firebase/auth";
-import { addDoc, collection, doc, getDocs, getFirestore, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, getFirestore, orderBy, query, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import type { MockOrder, UserProfile } from "./data/domain";
+import type { MockOrder, QueueItem, UserProfile } from "./data/domain";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBB9oVUCPegAPXProtkx39RJmGWWFMJYO4",
@@ -46,4 +46,45 @@ export async function saveOrder(user: User, order: MockOrder) {
 export async function loadOrders(user: User): Promise<MockOrder[]> {
   const snapshot = await getDocs(query(collection(firestore, "users", user.uid, "orders"), orderBy("createdAt", "desc")));
   return snapshot.docs.map(orderDoc => orderDoc.data() as MockOrder);
+}
+
+export async function addToGlobalQueue(user: User, order: MockOrder) {
+  const queueRef = await addDoc(collection(firestore, "queue"), {
+    ownerId: user.uid,
+    orderNumber: order.orderNumber,
+    status: "waiting",
+    position: 0,
+    batches: order.batches,
+    parts: order.parts,
+    eta: order.estimatedCompletion ?? null,
+    createdAt: serverTimestamp(),
+  });
+  return queueRef.id;
+}
+
+export async function loadGlobalQueue(userId: string): Promise<QueueItem[]> {
+  const snapshot = await getDocs(query(collection(firestore, "queue"), orderBy("createdAt", "asc")));
+  const allItems = snapshot.docs.map((queueDoc, index) => ({
+    id: queueDoc.id,
+    ...(queueDoc.data() as Omit<QueueItem, "id" | "position">),
+    position: index + 1,
+  }));
+  return allItems.filter(item => item.ownerId === userId);
+}
+
+export async function loadAllQueue(): Promise<QueueItem[]> {
+  const snapshot = await getDocs(query(collection(firestore, "queue"), orderBy("createdAt", "asc")));
+  return snapshot.docs.map((queueDoc, index) => ({
+    id: queueDoc.id,
+    ...(queueDoc.data() as Omit<QueueItem, "id" | "position">),
+    position: index + 1,
+  }));
+}
+
+export function updateQueueStatus(queueId: string, status: QueueItem["status"]) {
+  return updateDoc(doc(firestore, "queue", queueId), { status });
+}
+
+export function removeQueueItem(queueId: string) {
+  return deleteDoc(doc(firestore, "queue", queueId));
 }

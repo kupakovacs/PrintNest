@@ -1,9 +1,12 @@
+import { useState } from "react";
 import * as Icons from "lucide-react";
 import { AppNav, StatusBadge } from "../components/common";
+import { QueuePanel } from "../components/workspace";
 import {
   AuthCallbacks,
   Batch,
   MockOrder,
+  QueueItem,
   MOCK_PAST_ORDERS,
   buildCurrentOrder,
   fmt,
@@ -15,14 +18,17 @@ const { ArrowRight, Box, Clock3, Package, Plus, Settings2, Sparkles } = Icons;
 interface DashboardViewProps {
   batches: Batch[];
   orders: MockOrder[];
+  queue: QueueItem[];
   auth: AuthCallbacks;
   onNewOrder: () => void;
   onOrders: () => void;
   onProfile: () => void;
   onTrack: () => void;
+  onAdmin?: () => void;
 }
 
-export function DashboardView({ batches, orders: savedOrders, auth, onNewOrder, onOrders, onProfile, onTrack }: DashboardViewProps) {
+export function DashboardView({ batches, orders: savedOrders, queue, onQueueOrder, onAdmin, auth, onNewOrder, onOrders, onProfile, onTrack }: DashboardViewProps & { onQueueOrder: (orderNumber: string) => void }) {
+  const [showQueue, setShowQueue] = useState(false);
   const user = auth.user ?? { name: "User", email: "" };
   const currentOrder = batches.length > 0 ? buildCurrentOrder(batches) : null;
   const orders: MockOrder[] = currentOrder ? [currentOrder, ...savedOrders] : savedOrders;
@@ -40,14 +46,25 @@ export function DashboardView({ batches, orders: savedOrders, auth, onNewOrder, 
         containerClassName="max-w-6xl mx-auto"
         leftContent={<span className="text-sm font-semibold">Dashboard</span>}
         rightContent={(
+          <div className="flex items-center gap-2">
+          <button onClick={() => setShowQueue(true)}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors font-medium">
+            <Clock3 size={14} />Queue
+          </button>
           <button onClick={onNewOrder}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-violet-700 transition-colors font-medium">
             <Plus size={14} />New order
           </button>
+          {onAdmin && <button onClick={onAdmin}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors font-medium">
+            Admin
+          </button>}
+          </div>
         )}
       />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <main className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {showQueue && <QueuePanel queue={queue} onClose={() => setShowQueue(false)} onSelect={onQueueOrder} />}
         <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-2">Your workspace</p>

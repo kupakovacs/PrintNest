@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import * as Icons from "lucide-react";
 import {
@@ -85,24 +85,34 @@ export function PrintingBatchCard({ batchName, material, color, fileCount, print
 }
 
 
-export function TrackingTimeline({ batches, printProgress, currentLayer }: {
-  batches: Batch[]; printProgress: number; currentLayer: number;
+export function TrackingTimeline({ batches, order, printProgress, currentLayer }: {
+  batches: Batch[]; order: MockOrder; printProgress: number; currentLayer: number;
 }) {
   const totalLayers    = 665;
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(["printing", "file-analysis"]));
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["received"]));
   const toggle = (id: string) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
   const remainingMins  = Math.max(0, Math.round(((100 - printProgress) / 100) * 192));
 
-  const stages: { id: string; label: string; status: StageStatus; time?: string; description: string }[] = [
-    { id: "received",    label: "Order Received",        status: "done",   time: "Today · 09:14", description: `${batches.reduce((s, b) => s + b.files.length, 0)} files received, payment confirmed.` },
-    { id: "file-analysis", label: "File Analysis",       status: "done",   time: "Today · 09:21", description: "All files passed automated geometry analysis." },
-    { id: "waiting",     label: "Waiting for Printing",  status: "done",   time: "Today · 11:00", description: "Entered queue at position #4." },
-    { id: "printing",    label: "Printing",              status: "active", time: "Today · 11:42", description: `${batches.length} batch${batches.length !== 1 ? "es" : ""} — ${batches[0]?.name ?? "Batch A"} printing now.` },
-    { id: "inspection",  label: "Quality Inspection",    status: "pending", description: "Automated visual and dimensional check after printing." },
-    { id: "packaging",   label: "Packaging",             status: "pending", description: "Secure packaging with selected protection level." },
-    { id: "shipped",     label: "Shipped",               status: "pending", description: "Carrier pickup and tracking number assigned." },
-    { id: "delivered",   label: "Delivered",             status: "pending", description: "Delivery to your address with confirmation." },
+  const defaultStages = [
+    { id: "received" as const, label: "Order Received", description: "Your order was submitted and is awaiting processing." },
+    { id: "file-analysis" as const, label: "File Analysis", description: "Files will be checked for geometry and printability." },
+    { id: "waiting" as const, label: "Waiting for Printing", description: "The order will enter the print queue after analysis." },
+    { id: "printing" as const, label: "Printing", description: "Your parts will be printed when a machine is assigned." },
+    { id: "inspection" as const, label: "Quality Inspection", description: "Printed parts will receive a visual and dimensional check." },
+    { id: "packaging" as const, label: "Packaging", description: "Parts will be packed with the selected protection level." },
+    { id: "shipped" as const, label: "Shipped", description: "Carrier pickup and tracking details will appear here." },
+    { id: "delivered" as const, label: "Delivered", description: "Delivery confirmation will appear here." },
   ];
+  const savedStages = new Map((order.timeline ?? []).map(stage => [stage.id, stage]));
+  const stages = defaultStages.map(defaultStage => {
+    const saved = savedStages.get(defaultStage.id);
+    return {
+      ...defaultStage,
+      status: saved?.status ?? "pending" as StageStatus,
+      description: saved?.description ?? defaultStage.description,
+      time: saved?.timestamp ? new Date(saved.timestamp).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : undefined,
+    };
+  });
 
   return (
     <div className="space-y-0">
@@ -126,7 +136,7 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
                   <span className="text-[10px] font-mono px-2 py-0.5 bg-violet-100 text-primary rounded-full font-medium">In Progress</span>
                 )}
                 {stage.time && <span className="text-xs text-muted-foreground ml-auto font-mono">{stage.time}</span>}
-                {(stage.status !== "pending" || stage.id === "inspection") && (
+                {(stage.status !== "pending" || stage.id === "received") && (
                   <ChevronDown size={14} className={`text-muted-foreground ml-1 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                 )}
               </button>
@@ -136,9 +146,9 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
                   {stage.id === "received" && (
                     <div className="bg-muted/40 rounded-xl p-3 text-xs space-y-1.5">
                       {[
-                        `${batches.reduce((s, b) => s + b.files.length, 0)} files received and stored`,
-                        `Payment of ${fmt(calcOrderSummary(batches).grandTotal)} confirmed`,
-                        "Order #PN-2026-07-8743 assigned",
+                        `${batches.reduce((s, b) => s + b.files.length, 0)} files selected for this order`,
+                        `Order total: ${fmt(calcOrderSummary(batches).grandTotal)}`,
+                        `Order ${order.orderNumber} created`,
                       ].map(t => (
                         <div key={t} className="flex items-center gap-2">
                           <CheckCircle size={12} className="text-emerald-500 flex-shrink-0" /><span>{t}</span>
@@ -146,7 +156,7 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
                       ))}
                     </div>
                   )}
-                  {stage.id === "file-analysis" && (
+                  {stage.id === "file-analysis" && stage.status !== "pending" && (
                     <div className="space-y-1.5">
                       {batches.flatMap(b => b.files).map(f => (
                         <div key={f.id} className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2 text-xs">
@@ -157,7 +167,7 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
                       ))}
                     </div>
                   )}
-                  {stage.id === "waiting" && (
+                  {stage.id === "waiting" && stage.status !== "pending" && (
                     <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground space-y-1">
                       <p>Entered queue at position #4 · 09:00</p>
                       <p>Position #3 · 09:22 — Order #213 completed</p>
@@ -165,7 +175,7 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
                       <p className="text-emerald-600 font-medium">Printing started · 11:42</p>
                     </div>
                   )}
-                  {stage.id === "printing" && (
+                  {stage.id === "printing" && stage.status !== "pending" && (
                     <div className="space-y-2">
                       {batches.map((batch, i) => (
                         <PrintingBatchCard key={batch.id}
@@ -200,7 +210,7 @@ export function TrackingTimeline({ batches, printProgress, currentLayer }: {
 }
 
 
-export function TrackingSidebar({ batches, printProgress }: { batches: Batch[]; printProgress: number }) {
+export function TrackingSidebar({ batches, order, printProgress }: { batches: Batch[]; order: MockOrder; printProgress: number }) {
   const { totalMass, totalTime, totalParts, grandTotal } = calcOrderSummary(batches);
   const delivery = DELIVERY_OPTIONS.find(d => d.id === batches[0]?.deliverySpeed) ?? DELIVERY_OPTIONS[1];
   const [notifs, setNotifs] = useState({ printing: true, complete: true, issue: true, shipped: true, delivered: true });
@@ -215,7 +225,7 @@ export function TrackingSidebar({ batches, printProgress }: { batches: Batch[]; 
         <div className="px-4 py-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Status</span>
-            <StatusBadge status="printing" />
+            <StatusBadge status={order.status} />
           </div>
           <div>
             <div className="flex justify-between text-xs mb-1">
@@ -229,10 +239,10 @@ export function TrackingSidebar({ batches, printProgress }: { batches: Batch[]; 
           </div>
           <div className="pt-2 space-y-2 border-t border-border/50">
             {[
-              { label: "Order #",    val: "PN-2026-07-8743" },
-              { label: "Placed",     val: "Jul 24 · 09:14"  },
-              { label: "Est. done",  val: "Jul 24 · 16:30"  },
-              { label: "Est. ship",  val: delivery.id === "rush" ? "Jul 25" : delivery.id === "priority" ? "Jul 26" : "Jul 27–29" },
+              { label: "Order #",    val: order.orderNumber },
+              { label: "Placed",     val: order.placedAt ? new Date(order.placedAt).toLocaleDateString([], { month: "short", day: "numeric" }) : "-" },
+              { label: "Est. done",  val: order.estimatedCompletion ? new Date(order.estimatedCompletion).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-" },
+              { label: "Est. ship",  val: order.estimatedDelivery ? new Date(order.estimatedDelivery).toLocaleDateString([], { month: "short", day: "numeric" }) : "-" },
               { label: "Total",      val: fmt(grandTotal)   },
               { label: "Print time", val: `${totalTime.toFixed(1)}h` },
               { label: "Material",   val: `${totalMass}g`   },
@@ -284,19 +294,20 @@ export function TrackingSidebar({ batches, printProgress }: { batches: Batch[]; 
 }
 
 
-export function OrderTrackingView({ batches, onBack, auth }: {
-  batches: Batch[]; onBack: () => void; auth: AuthCallbacks;
+export function OrderTrackingView({ batches, order: savedOrder, onBack, auth }: {
+  batches: Batch[]; order?: MockOrder; onBack: () => void; auth: AuthCallbacks;
 }) {
-  const [printProgress, setPrintProgress] = useState(67.4);
-  const [currentLayer,  setCurrentLayer]  = useState(448);
-
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setPrintProgress(p => p >= 100 ? 100 : +(p + 0.03).toFixed(2));
-      setCurrentLayer(l => Math.min(l + 1, 665));
-    }, 2000);
-    return () => clearInterval(iv);
-  }, []);
+  const fallbackOrder = buildCurrentOrder(batches);
+  const order = savedOrder?.timeline?.length
+    ? savedOrder
+    : { ...fallbackOrder, ...savedOrder, timeline: fallbackOrder.timeline };
+  const timeline = order.timeline ?? [];
+  const activeStage = timeline.find(stage => stage.status === "active");
+  const completedStages = timeline.filter(stage => stage.status === "done").length;
+  const stageIds = ["received", "file-analysis", "waiting", "printing", "inspection", "packaging", "shipped", "delivered"];
+  const stageStatus = new Map(timeline.map(stage => [stage.id, stage.status]));
+  const printProgress = 0;
+  const currentLayer = 0;
 
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -304,7 +315,7 @@ export function OrderTrackingView({ batches, onBack, auth }: {
         auth={auth}
         onLogoClick={auth.onHome}
         showQuote={false}
-        leftContent={<><span className="text-sm font-mono text-muted-foreground hidden sm:block">Order #PN-2026-07-8743</span><StatusBadge status="printing" /></>}
+        leftContent={<><span className="text-sm font-mono text-muted-foreground hidden sm:block">Order #{order.orderNumber}</span><StatusBadge status={order.status} /></>}
         rightContent={<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="hidden sm:block">Live</span>
@@ -318,9 +329,9 @@ export function OrderTrackingView({ batches, onBack, auth }: {
               { label: "Parts",     val: String(batches.reduce((s, b) => s + b.files.reduce((ss, f) => ss + f.quantity, 0), 0)) },
               { label: "Material",  val: `${batches.reduce((s, b) => s + calcTotals(b).totalMass, 0)}g` },
               { label: "Print time",val: `${batches.reduce((s, b) => s + calcTotals(b).totalTime, 0).toFixed(1)}h` },
-              { label: "Placed",    val: "09:14" },
-              { label: "Est. done", val: "16:30" },
-              { label: "Delivery",  val: "Jul 27" },
+              { label: "Placed",    val: order.placedAt ? new Date(order.placedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-" },
+              { label: "Est. done", val: order.estimatedCompletion ? new Date(order.estimatedCompletion).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-" },
+              { label: "Delivery",  val: order.estimatedDelivery ? new Date(order.estimatedDelivery).toLocaleDateString([], { month: "short", day: "numeric" }) : "-" },
               { label: "Total",     val: fmt(calcOrderSummary(batches).grandTotal) },
             ].map(s => (
               <div key={s.label}>
@@ -332,12 +343,12 @@ export function OrderTrackingView({ batches, onBack, auth }: {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs text-muted-foreground">Stage progress</span>
-              <span className="text-xs font-mono text-primary font-medium">4 / 8 · Printing</span>
+              <span className="text-xs font-mono text-primary font-medium">{completedStages + (activeStage ? 1 : 0)} / {stageIds.length} · {activeStage?.label ?? order.status}</span>
             </div>
             <div className="flex gap-0.5">
-              {Array.from({ length: 8 }).map((_, i) => (
+              {stageIds.map((stageId, i) => (
                 <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${
-                  i < 3 ? "bg-emerald-400" : i === 3 ? "bg-violet-500" : "bg-muted"}`} />
+                  stageStatus.get(stageId) === "done" ? "bg-emerald-400" : stageStatus.get(stageId) === "active" ? "bg-violet-500" : "bg-muted"}`} />
               ))}
             </div>
           </div>
@@ -347,10 +358,10 @@ export function OrderTrackingView({ batches, onBack, auth }: {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-8 items-start">
           <div>
             <h2 className="text-lg font-bold mb-6">Order Timeline</h2>
-            <TrackingTimeline batches={batches} printProgress={printProgress} currentLayer={currentLayer} />
+            <TrackingTimeline batches={batches} order={order} printProgress={printProgress} currentLayer={currentLayer} />
           </div>
           <div className="sticky top-20">
-            <TrackingSidebar batches={batches} printProgress={printProgress} />
+            <TrackingSidebar batches={batches} order={order} printProgress={printProgress} />
           </div>
         </div>
       </div>

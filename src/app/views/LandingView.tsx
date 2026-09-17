@@ -2,13 +2,15 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import * as Icons from "lucide-react";
 import {
-  Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, QUEUE, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials
+  Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, QueueItem, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, QUEUE, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials
 } from "../data/domain";
 const { Upload, ChevronDown, ChevronUp, Plus, X, Package, Clock, Truck, ArrowLeft, Check, Layers, FileText, Zap, Shield, ChevronRight, Box, Bell, Eye, CheckCircle, Phone, User, LogOut, Mail, Lock, RotateCcw, MapPin, Printer, Droplets, Sun, Wind, Flame, Thermometer, Ruler, Weight, Cpu, Star, Info, ArrowRight, Sparkles, BarChart3, Camera } = Icons;
 import { StatusBadge, AppNav, InfoNav, UserMenu, ModeToggle, SectionHeader, OptionPill, ColorPicker, OrientationPicker, PriceBreakdown, DeliveryTimeline, Slider, IsometricPart } from "../components/common";
 
-export function LandingView({ onFilesSelected, auth, onNav }: {
+export function LandingView({ onFilesSelected, queue, onQueueOrder, auth, onNav }: {
   onFilesSelected: (files: File[]) => void;
+  queue: QueueItem[];
+  onQueueOrder: (orderNumber: string) => void;
   auth: AuthCallbacks;
   onNav: (view: AppView) => void;
 }) {
@@ -115,6 +117,32 @@ export function LandingView({ onFilesSelected, auth, onNav }: {
           </button>
         </motion.div>
       </main>
+
+      {auth.isLoggedIn && (
+        <section className="border-t border-border bg-white px-4 sm:px-8 py-10">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-end justify-between gap-4 mb-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-primary mb-2">Your activity</p>
+                <h2 className="text-xl font-bold">Your place in the print queue</h2>
+              </div>
+              <button onClick={() => onNav("orders")} className="text-xs font-medium text-primary hover:underline">View orders</button>
+            </div>
+            {queue.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {queue.map(item => (
+                  <button key={item.id} onClick={() => onQueueOrder(item.orderNumber)}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 hover:bg-secondary hover:border-primary/20 transition-colors text-left">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.status === "printing" ? "bg-emerald-500" : item.status === "review" ? "bg-blue-400" : "bg-amber-400"}`} />
+                    <span className="flex-1 min-w-0"><span className="block text-sm font-medium truncate">{item.orderNumber}</span><span className="block text-xs text-muted-foreground">{item.parts} part{item.parts !== 1 ? "s" : ""} · {item.status}</span></span>
+                    <span className="text-xs font-mono font-semibold text-primary">#{item.position}</span>
+                  </button>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted-foreground">You do not have any orders in the global queue.</p>}
+          </div>
+        </section>
+      )}
 
       {/* Feature strip */}
       <section className="border-t border-border bg-white/60 px-8 py-12">

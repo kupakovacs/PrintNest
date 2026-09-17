@@ -4,6 +4,8 @@ import * as Icons from "lucide-react";
 import {
   Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, QUEUE, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials
 } from "../data/domain";
+import type { QueueItem } from "../data/domain";
+import { QueuePanel } from "../components/workspace";
 const { Upload, ChevronDown, ChevronUp, Plus, X, Package, Clock, Truck, ArrowLeft, Check, Layers, FileText, Zap, Shield, ChevronRight, Box, Bell, Eye, CheckCircle, Phone, User, LogOut, Mail, Lock, RotateCcw, MapPin, Printer, Droplets, Sun, Wind, Flame, Thermometer, Ruler, Weight, Cpu, Star, Info, ArrowRight, Sparkles, BarChart3, Camera, LayoutDashboard } = Icons;
 import { StatusBadge, AppNav, InfoNav, UserMenu, ModeToggle, SectionHeader, OptionPill, ColorPicker, OrientationPicker, PriceBreakdown, DeliveryTimeline, Slider, IsometricPart } from "../components/common";
 
@@ -54,10 +56,11 @@ export function OrderCard({ order, onTrack }: { order: MockOrder; onTrack: () =>
 }
 
 
-export function OrdersView({ batches, orders: savedOrders, auth, onTrackCurrent, onNewOrder }: {
-  batches: Batch[]; orders: MockOrder[]; auth: AuthCallbacks; onTrackCurrent: () => void; onNewOrder: () => void;
+export function OrdersView({ batches, orders: savedOrders, queue, onQueueOrder, auth, onTrackCurrent, onNewOrder }: {
+  batches: Batch[]; orders: MockOrder[]; queue: QueueItem[]; onQueueOrder: (orderNumber: string) => void; auth: AuthCallbacks; onTrackCurrent: () => void; onNewOrder: () => void;
 }) {
   const [filter, setFilter] = useState<"all" | "active" | "delivered">("all");
+  const [showQueue, setShowQueue] = useState(false);
   const currentOrder  = batches.length > 0 ? buildCurrentOrder(batches) : null;
   const allOrders: MockOrder[] = [
     ...(currentOrder ? [currentOrder] : []),
@@ -81,12 +84,16 @@ export function OrdersView({ batches, orders: savedOrders, auth, onTrackCurrent,
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <LayoutDashboard size={14} />Dashboard
         </button><ChevronRight size={12} className="text-border" /><span className="text-sm font-semibold">My Orders</span>{activeCount > 0 && <span className="text-xs px-1.5 py-0.5 bg-primary text-white rounded-full font-mono">{activeCount}</span>}</>}
-        rightContent={<button onClick={onNewOrder}
+        rightContent={<div className="flex items-center gap-2"><button onClick={() => setShowQueue(true)}
+          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors font-medium">
+          <Clock size={14} />Queue
+        </button><button onClick={onNewOrder}
           className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-primary text-white hover:bg-violet-700 transition-colors font-medium">
           <Plus size={14} />New order
-        </button>}
+        </button></div>}
       />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <main className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {showQueue && <QueuePanel queue={queue} onClose={() => setShowQueue(false)} onSelect={onQueueOrder} />}
         <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-2">Account activity</p>
