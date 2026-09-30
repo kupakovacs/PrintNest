@@ -28,7 +28,19 @@ export interface OrderTimelineEvent {
   description: string;
 }
 
+export const ORDER_STAGES: { id: OrderStageId; label: string; description: string }[] = [
+  { id: "received", label: "Order Received", description: "Your order was submitted and is awaiting processing." },
+  { id: "file-analysis", label: "File Analysis", description: "Files were checked for geometry and printability." },
+  { id: "waiting", label: "Waiting for Printing", description: "The order is waiting in the print queue." },
+  { id: "printing", label: "Printing", description: "Your parts are currently being printed." },
+  { id: "inspection", label: "Quality Inspection", description: "Printed parts are being checked for quality." },
+  { id: "packaging", label: "Packaging", description: "Your parts are being securely packaged." },
+  { id: "shipped", label: "Shipped", description: "Your order has been handed to the carrier." },
+  { id: "delivered", label: "Delivered", description: "Your order has been delivered." },
+];
+
 export interface PrintFile {
+  url: any;
   id: string; name: string; size: number; quantity: number;
   orientation: Orientation; note: string; mass: number; time: number; price: number;
   storagePath?: string; downloadURL?: string;
@@ -60,17 +72,26 @@ export interface MockOrder {
   placedAt?: string;
   estimatedCompletion?: string;
   estimatedDelivery?: string;
+  ownerId?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  settings?: Batch[];
+  printingBatchId?: string;
+  printProgress?: number;
+  currentLayer?: number;
 }
 
 export interface QueueItem {
   id: string;
   ownerId: string;
+  orderId?: string;
   orderNumber: string;
   status: "printing" | "waiting" | "review";
   position: number;
   eta?: string;
   batches: number;
   parts: number;
+  queuePosition?: number;
 }
 
 /* ─────────────────────────────────────────────────────── */
@@ -170,7 +191,7 @@ export function makeBatch(name: string, files: PrintFile[]): Batch {
 export function makeFile(name: string, size: number): PrintFile {
   const seed = name.length * 7 + size;
   return {
-    id: `f-${Math.random().toString(36).slice(2)}`, name, size, quantity: 1, orientation: "auto", note: "",
+    id: `f-${Math.random().toString(36).slice(2)}`, name, url: null, size, quantity: 1, orientation: "auto", note: "",
     mass: 8 + (seed % 60), time: +((0.5 + (seed % 50) / 10).toFixed(1)),
     price: +((2.4 + (seed % 120) / 10).toFixed(2)),
   };

@@ -4,10 +4,13 @@ import * as Icons from "lucide-react";
 import {
   Material, Color, Details, Strength, SupportMode, DeliverySpeed, PostProcessing, FailedPrint, Protection, InfillPattern, Orientation, AppView, OrderStatus, PrintFile, Batch, UserProfile, AuthCallbacks, MockOrder, QueueItem, COLOR_OPTIONS, MATERIAL_OPTIONS, DETAILS_OPTIONS, STRENGTH_OPTIONS, SUPPORT_OPTIONS, INFILL_PATTERNS, DELIVERY_OPTIONS, MOCK_PAST_ORDERS, calcTotals, fmt, priceTierDots, calcOrderSummary, buildCurrentOrder, nameFromEmail, initials, makeBatch, makeFile 
 } from "../data/domain";
+
+
 const { Upload, ChevronDown, ChevronUp, Plus, X, Package, Clock, Truck, ArrowLeft, Check, Layers, FileText, Zap, Shield, ChevronRight, Box, Bell, Eye, CheckCircle, Phone, User, LogOut, Mail, Lock, RotateCcw, MapPin, Printer, Droplets, Sun, Wind, Flame, Thermometer, Ruler, Weight, Cpu, Star, Info, ArrowRight, Sparkles, BarChart3, Camera } = Icons;
 import { AppNav } from "./common";
 
 import { IsometricPart, OrientationPicker, ModeToggle, SectionHeader, PriceBreakdown, DeliveryTimeline, ColorPicker, OptionPill, Slider} from "./common";
+import { StlModel } from "../data/stlThumbnailGenerator";
 
 export function ModelViewer({ batches }: { batches: Batch[] }) {
   const colorHex   = COLOR_OPTIONS.find(c => c.id === batches[0]?.color)?.hex ?? "#1C1C1E";
@@ -29,6 +32,7 @@ export function ModelViewer({ batches }: { batches: Batch[] }) {
       <div className="relative flex-1 flex items-center justify-center">
         <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
           <IsometricPart colorHex={colorHex} />
+          <StlModel url={fileInputRef.current?.src ?? ""} />
         </motion.div>
       </div>
       <div className="relative border-t border-white/5 px-4 py-3 grid grid-cols-3 gap-2">

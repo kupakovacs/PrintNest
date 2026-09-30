@@ -92,6 +92,7 @@ export function TrackingTimeline({ batches, order, printProgress, currentLayer }
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["received"]));
   const toggle = (id: string) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
   const remainingMins  = Math.max(0, Math.round(((100 - printProgress) / 100) * 192));
+  const printingBatchId = order.printingBatchId;
 
   const defaultStages = [
     { id: "received" as const, label: "Order Received", description: "Your order was submitted and is awaiting processing." },
@@ -177,15 +178,15 @@ export function TrackingTimeline({ batches, order, printProgress, currentLayer }
                   )}
                   {stage.id === "printing" && stage.status !== "pending" && (
                     <div className="space-y-2">
-                      {batches.map((batch, i) => (
+                      {[...batches].sort((a, b) => Number(b.id === printingBatchId) - Number(a.id === printingBatchId)).map((batch, i) => (
                         <PrintingBatchCard key={batch.id}
                           batchName={batch.name} material={batch.material} color={batch.color}
-                          fileCount={batch.files.length} printProgress={i === 0 ? printProgress : 0}
-                          currentLayer={i === 0 ? currentLayer : 0} totalLayers={totalLayers}
-                          printerName={i === 0 ? "X1C #1" : "X1C #2"}
-                          startTime={i === 0 ? "11:42" : "~15:10"}
-                          remainingMins={i === 0 ? remainingMins : 120}
-                          status={i === 0 ? "printing" : "queued"} />
+                          fileCount={batch.files.length} printProgress={batch.id === printingBatchId ? order.printProgress ?? printProgress : 0}
+                          currentLayer={batch.id === printingBatchId ? order.currentLayer ?? currentLayer : 0} totalLayers={totalLayers}
+                          printerName={batch.id === printingBatchId ? "Assigned printer" : "Queued"}
+                          startTime={batch.id === printingBatchId ? (order.timeline?.find(item => item.id === "printing")?.timestamp ? new Date(order.timeline.find(item => item.id === "printing")!.timestamp!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Not started") : "Not started"}
+                          remainingMins={batch.id === printingBatchId ? remainingMins : 0}
+                          status={batch.id === printingBatchId ? "printing" : "queued"} />
                       ))}
                     </div>
                   )}

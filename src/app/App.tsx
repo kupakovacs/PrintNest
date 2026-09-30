@@ -10,7 +10,7 @@ import { OrdersView } from "./views/OrdersView";
 import { ProfileView } from "./views/ProfileView";
 import { DashboardView } from "./views/DashboardView";
 import { WorkspaceView } from "./components/workspace";
-import { AdminView } from "./views/AdminView";
+import { NewAdminView } from "./views/NewAdminView";
 
 export default function App() {
   const state = useAppState();
@@ -28,7 +28,7 @@ export default function App() {
     case "dashboard": return <DashboardView batches={batches} orders={state.orders} queue={state.queue} onQueueOrder={state.openQueueOrder} onAdmin={state.isAdmin ? () => navigate("admin") : undefined} auth={auth} onNewOrder={() => navigate("landing")} onOrders={() => navigate("orders")} onProfile={() => navigate("profile")} onTrack={() => navigate("tracking")} />;
     case "orders": return <OrdersView batches={batches} orders={state.orders} queue={state.queue} onQueueOrder={state.openQueueOrder} auth={auth} onTrackCurrent={() => navigate("tracking")} onNewOrder={() => navigate("landing")} />;
     case "profile": return <ProfileView auth={auth} onMyOrders={() => navigate("orders")} />;
-    case "admin": return state.isAdmin ? <AdminView auth={auth} onBack={() => navigate("dashboard")} /> : <DashboardView batches={batches} orders={state.orders} queue={state.queue} onQueueOrder={state.openQueueOrder} auth={auth} onNewOrder={() => navigate("landing")} onOrders={() => navigate("orders")} onProfile={() => navigate("profile")} onTrack={() => navigate("tracking")} />;
+    case "admin": return state.isAdmin ? <NewAdminView auth={auth} onBack={() => navigate("dashboard")} /> : <DashboardView batches={batches} orders={state.orders} queue={state.queue} onQueueOrder={state.openQueueOrder} auth={auth} onNewOrder={() => navigate("landing")} onOrders={() => navigate("orders")} onProfile={() => navigate("profile")} onTrack={() => navigate("tracking")} />;
     default: return null;
   }
 }
